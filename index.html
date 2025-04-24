@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tabela Dinâmica Editável</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #2b1821;
+        }
+
+        h1 {
+            color: #fd288d;
+            font-size: 50px;
+            text-align: center;
+        }
+
+        #BtnAdicionar {
+            margin-left: 700px;
+            width: 500px;
+            background-color: rgba(0, 0, 0, 0.5);
+            color: green;
+            border-radius: 10px;
+            border-color: green;
+            border-spacing: 10px;
+            font-size: 40px;
+            text-align: center;
+            cursor: pointer;
+            padding: 10px;
+        }
+
+        table {
+            border-collapse: collapse;
+            margin-top: 20px;
+            width: 100%;
+            background-color: white;
+        }
+
+        th,
+        td {
+            border: 1px solid white;
+            padding: 8px;
+            text-align: center;
+            font-size: 20px;
+        }
+
+        th {
+            background-color: #2b1821;
+            color: white;
+        }
+
+        dialog {
+            width: 600px;
+            height: 600px;
+            border-radius: 10%;
+            border-color: #bb1d66;
+        }
+
+        form {
+            margin-top: 100px;
+            text-align: center;
+            font-size: 50px;
+        }
+
+        .prioridade {
+            background-color: lightgray;
+            border: none;
+            padding: 10px;
+            margin: 5px;
+            cursor: pointer;
+            font-size: 20px;
+            border-radius: 5px;
+        }
+
+        .prioridade.ativa {
+            background-color: gold;
+            font-weight: bold;
+        }
+
+        #baixa {
+            background-color: greenyellow;
+            border-color: green;
+        }
+
+        #media {
+            background-color: rgb(0, 183, 255);
+            border-color: blue;
+        }
+
+        #alta {
+            background-color: rgb(255, 46, 46);
+            border-color: red;
+        }
+
+        input {
+            margin-top: 20px;
+            width: 100%;
+            height: 30px;
+            border-radius: 2%;
+            border-color: #2b1821;
+            text-align: center;
+        }
+
+        #submit {
+            margin-top: 20px;
+            border-radius: 10%;
+            height: 80px;
+            width: 200px;
+            background-color: green;
+            border-color: white;
+            color: white;
+            font-size: 50px;
+        }
+    </style>
+</head>
+
+
+
+
+
+
+
+
+
+
+
+<body>
+    <h1>Lista de Tarefas</h1>
+    <div id="tableContainer">
+        <table>
+            <thead>
+                <tr>
+                    <th>Tarefa</th>
+                    <th>Data</th>
+                    <th>Prioridade</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody id="ListadeTarefas"></tbody>
+        </table>
+    </div>
+
+    <button id="BtnAdicionar" onclick="Adicionar(true)">Adicionar Tarefa</button>
+
+    <dialog id="dialog">
+        <form id="form">
+            <label>Tarefa:</label>
+            <input type="text" id="cxtarefa" required><br>
+            <label>Data:</label>
+            <input type="date" id="cxdata" required><br>
+            <button type="button" id="baixa" class="prioridade" onclick="selecionarPrioridade('Baixa')">B</button>
+            <button type="button" id="media" class="prioridade" onclick="selecionarPrioridade('Média')">M</button>
+            <button type="button" id="alta" class="prioridade" onclick="selecionarPrioridade('Alta')">A</button>
+            <input type="hidden" id="prioridadeSelecionada" value="">
+            <button type="submit" id="submit">Salvar</button>
+        </form>
+    </dialog>
+
+
+
+
+
+
+
+
+
+
+    <script>
+        const dialog = document.getElementById('dialog');
+        const form = document.getElementById('form');
+        const listaDeTarefas = document.getElementById('ListadeTarefas');
+        let listadetarefa = { ultimold: 0, tarefas: [] };
+        let prioridadeAtual = "";
+        let tarefaEmEdicao = null;
+
+        window.onload = () => {
+            dialog.close();
+            carregarLS();
+        };
+
+        function Adicionar(novo = false) {
+            if (novo) {
+                limparCampos();
+                tarefaEmEdicao = null;
+            }
+            dialog.showModal();
+        }
+
+        form.addEventListener("submit", function (e) {
+            e.preventDefault();
+            let novatarefa = document.getElementById('cxtarefa').value;
+            let data = document.getElementById('cxdata').value;
+            if (tarefaEmEdicao) {
+                tarefaEmEdicao.novatarefa = novatarefa;
+                tarefaEmEdicao.data = data;
+                tarefaEmEdicao.prioridade = prioridadeAtual;
+                tarefaEmEdicao = null; // Limpa a variável após edição
+            } else {
+                AdicionarTarefa(novatarefa, data);
+            }
+
+            dialog.close();
+            criarTabela();
+        });
+
+        function selecionarPrioridade(prioridade) {
+            prioridadeAtual = prioridade;
+            document.getElementById("prioridadeSelecionada").value = prioridade;
+            document.querySelectorAll(".prioridade").forEach(btn => btn.classList.remove("ativa"));
+            if (prioridade === "Baixa") document.getElementById("baixa").classList.add("ativa");
+            if (prioridade === "Média") document.getElementById("media").classList.add("ativa");
+            if (prioridade === "Alta") document.getElementById("alta").classList.add("ativa");
+        }
+
+        function AdicionarTarefa(novatarefa, data) {
+            let prioridade = document.getElementById("prioridadeSelecionada").value || "Sem prioridade";
+            let cod = ++listadetarefa.ultimold;
+            listadetarefa.tarefas.push({ cod, novatarefa, data, prioridade });
+            criarTabela();
+        }
+
+        function criarTabela() {
+            listaDeTarefas.innerHTML = listadetarefa.tarefas.map((tarefa) => `
+                <tr>
+                    <td>${tarefa.novatarefa}</td>
+                    <td>${tarefa.data}</td>
+                    <td>${tarefa.prioridade}</td>
+                    <td>
+                        <button onclick="editarTarefa(${tarefa.cod})">Editar</button>
+                        <button onclick="excluirTarefa(${tarefa.cod})">Excluir</button>
+                    </td>
+                </tr>`).join('');
+            armazenarLS();
+        }
+
+        function limparCampos() {
+            document.getElementById("cxtarefa").value = "";
+            document.getElementById("cxdata").value = "";
+        }
+
+        function excluirTarefa(cod) {
+            listadetarefa.tarefas = listadetarefa.tarefas.filter(tarefa => tarefa.cod !== cod);
+            criarTabela();
+            armazenarLS();
+        }
+
+
+        function editarTarefa(cod) {
+            tarefaEmEdicao = listadetarefa.tarefas.find((tarefa) => tarefa.cod === cod);
+            if (tarefaEmEdicao) {
+                document.getElementById("cxtarefa").value = tarefaEmEdicao.novatarefa;
+                document.getElementById("cxdata").value = tarefaEmEdicao.data;
+                selecionarPrioridade(tarefaEmEdicao.prioridade);
+                dialog.showModal();
+            }
+        }
+
+        function armazenarLS() {
+            localStorage.setItem("listadetarefa", JSON.stringify(listadetarefa));
+        }
+
+        function carregarLS() {
+            const tarefasSalvas = JSON.parse(localStorage.getItem("listadetarefa"));
+            if (tarefasSalvas) {
+                listadetarefa = tarefasSalvas;
+                criarTabela();
+            }
+        }
+    </script>
+</body>
+
+</html>
